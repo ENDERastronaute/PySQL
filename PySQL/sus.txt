@@ -1,0 +1,11 @@
+var sus = input('Quel est votre nom : ')
+
+if sus == 'ENDERastronaute' {
+    log('Bienvenue ENDER gros fdp')
+
+    var mdr = input('que faire ? ')
+}
+
+else {
+    log('sus')
+}

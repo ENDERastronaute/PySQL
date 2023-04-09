@@ -25,7 +25,7 @@ def main():
             input_string = input('~$ ')
             tokens = Lexer.lexer(input_string)
 
-            parser = Parser(tokens, variables, version, test)
+            parser = Parser(tokens, variables, version)
             result = parser.parse()
     
     elif sys.argv[1] == '-r':
