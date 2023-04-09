@@ -1,16 +1,23 @@
 
 from modules.terminal import Terminal
 
+class Test:
+    def __init__(self, first, mode, second):
+        self.first = first
+        self.mode = mode
+        self.second = second
+
 
 class Parser:
-    def __init__(self, tokens, variables, version, test):
+    def __init__(self, tokens, variables, version):
         self.tokens = tokens
         self.current_token = None
         self.current_index = -1
         self.advance()
         self.variables = variables
         self.version = version
-        self.test = test
+        self.test = None
+        self.stack = []
 
     def advance(self):
         self.current_index += 1
@@ -62,6 +69,10 @@ class Parser:
 
     def factor(self):
         token = self.current_token
+
+        if token.lookahead != 'else' and token.type != 'NewLine' and len(self.stack) == 0:
+            self.test = None
+
         if token.type == "LPAREN":
             self.advance()
             result = self.expr()
@@ -217,7 +228,10 @@ class Parser:
                 
 
                 if self.current_token.type != 'LACO':
-                    raise Exception('Invalid statement syntax')
+                    if self.current_token.type != 'NewLine':
+                        raise Exception('Invalid statement syntax')
+                
+                self.stack.append(self.current_token)
                 
                 if mode == '==':
                     if first == second:
@@ -227,7 +241,22 @@ class Parser:
                         if self.current_token is not None:
 
                             if self.current_token.type != 'RACO':
-                                raise Exception('Invalid statement syntax')
+                                if self.current_token.type != 'NewLine':
+                                    raise Exception('Invalid statement syntax')
+                                
+                                else:
+                                    valid = False
+                                    num = self.current_index
+
+                                    while num < len(self.tokens):
+                                        num += 1
+                                        
+                                        if self.tokens[num].type == 'RACO':
+                                            valid = True
+                                            break
+
+                                    if not valid:
+                                        raise Exception("Invalid statement syntax")
                         
                         else:
                             raise Exception('Invalid statement syntax')
@@ -239,16 +268,62 @@ class Parser:
                             self.advance()
                         
                         self.advance()
+                    
+                self.test = Test(first, mode, second)
             
             elif token.lookahead == 'else':
                 if self.test == None:
-                    raise Exception("Invalid statement syntax")
+                    raise Exception("No if statement")
                 
+                first = self.test.first
+                mode = self.test.mode
+                second = self.test.second
+
+                self.advance()
+
+                if self.current_token.type != 'LACO':
+                    if self.current_token.type != 'NewLine':
+                        raise Exception('Invalid statement syntax')
                 
+                self.stack.append(self.current_token)
+                
+                if mode == '==':
+                    if first != second:
+                        self.advance()
+                        self.expr()
 
+                        if self.current_token is not None:
 
+                            if self.current_token.type != 'RACO':
+                                if self.current_token.type != 'NewLine':
+                                    raise Exception('Invalid statement syntax')
+                                
+                                else:
+                                    valid = False
+                                    num = self.current_index
+
+                                    while num < len(self.tokens):
+                                        num += 1
+                                        
+                                        if self.tokens[num].type == 'RACO':
+                                            valid = True
+                                            break
+
+                                    if not valid:
+                                        raise Exception("Invalid statement syntax")
+                        
+                        else:
+                            raise Exception('Invalid statement syntax')
+                        
+                        self.advance()
                     
-        
+                    else:
+                        while self.current_token.type != 'RACO':
+                            self.advance()
+                        
+                        self.advance()
+                
+
         elif self.current_token.type == 'APO':
             self.advance()
             num = self.current_index
@@ -261,7 +336,7 @@ class Parser:
 
                 if num >= len(self.tokens):
                     raise Exception("Expected 'EndStr'")
-            
+
             self.advance()
 
             self.advance()
@@ -270,7 +345,7 @@ class Parser:
         
         elif self.current_token.type == 'NewLine':
             self.advance()
-            self.expr()
+            return self.expr()
 
         elif self.current_token.type == 'Alpha':
             if self.current_token.lookahead not in self.variables :
@@ -281,6 +356,13 @@ class Parser:
             self.advance()
             
             return arg
+        
+        elif self.current_token.type == 'RACO':
+            if len(self.stack) == 0:
+                raise Exception("Syntax error : No matching '{'")
+            
+            self.stack.pop()
+            self.advance()
 
         else:
             raise Exception("Invalid token type")

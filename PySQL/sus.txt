@@ -1,4 +1,11 @@
-var sus = 20
-if sus == 20 {
-    log(sus)
+var sus = input('Quel est votre nom : ')
+
+if sus == 'ENDERastronaute' {
+    log('Bienvenue ENDER gros fdp')
+
+    var mdr = input('que faire ? ')
+}
+
+else {
+    log('sus')
 }

@@ -6,7 +6,7 @@ from modules.lexer import Lexer
 from modules.parser import Parser
 import os,sys
 
-version = '0.4'
+version = '0.5'
 
 
 #---MAIN---#
@@ -35,7 +35,7 @@ def main():
 
             tokens = Lexer.lexer(content)
 
-            parser = Parser(tokens, variables, version, test)
+            parser = Parser(tokens, variables, version)
             result = parser.parse()
 
         else:
