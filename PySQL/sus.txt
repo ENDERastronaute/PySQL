@@ -1,0 +1,4 @@
+var sus = 20
+if sus == 20 {
+    log(sus)
+}
