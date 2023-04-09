@@ -17,7 +17,7 @@ Example : `var name = 'ENDERastronaute'`
 
 # If Elif Else statements
 
-`else` and `elif` are not implemented yet  
+`elif` is not implemented yet  
 Unlike python it uses `{}`
 
 Example : `if name == 'ENDERastronaute' { log(name) }`
