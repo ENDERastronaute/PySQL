@@ -31,10 +31,28 @@ here are the basic functions of PySQL :
 2. `input()` Read text from terminal  
    Example : `var name = input('What's your name ? ')`
 
+# SQL requests (yipeee)
+
+So, PySQL has 'SQL' in it, here goes the part :  
+SQL requests have an HTML like style (<><>).
+
+SQL requests can be done only for PostgreSQL at the moment.
+
+Example :
+
+```SQL
+<SQL>
+   SELECT * FROM client
+   ORDER BY name
+<user 'postgres', pwd 'postgres', host '127.0.0.1', port 5432, db 'database'>
+```
+
+For now (this will soon be more efficient) you'll need to specify the user, password, host, port and database between the final <>.
+
 # Custom functions
 
 You can't create your own functions yet
 
-    <(^)  
+    <(^)
      /()\ PySQL
       --

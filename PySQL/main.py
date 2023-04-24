@@ -1,20 +1,18 @@
 
 #---IMPORTS---#
 
-from modules.terminal import Terminal
-from modules.lexer import Lexer
-from modules.parser import Parser
-import os,sys
+from frontend.terminal import Terminal
+from frontend.lexer import Lexer
+from frontend.parser import Parser
+import sys
 
-version = '0.5'
+version = '0.6'
 
 
 #---MAIN---#
 
 def main():
     variables = {}
-    test = None
-    print(sys.argv)
 
     if len(sys.argv) == 1:
 
