@@ -1,5 +1,5 @@
 
-from environment.token import Token
+from components.token import Token
 
 
 class Lexer():
@@ -8,6 +8,7 @@ class Lexer():
 
         keywords = [
             'let',
+            'var',
             'cls',
             'stop',
             'if',

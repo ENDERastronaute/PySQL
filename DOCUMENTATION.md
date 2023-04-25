@@ -12,10 +12,10 @@ it's literally a number, like : `14`
 
 # Variables
 
-Use `var` keyword to assign your variables  
-Example : `var name = 'ENDERastronaute'`
+Use `let` or `var` keyword to assign your variables  
+Example : `let name = 'ENDERastronaute'`
 
-# If Elif Else statements
+# If Elif Else statements (broken in v0.6.2)
 
 `elif` is not implemented yet  
 Unlike python it uses `{}`
@@ -29,7 +29,7 @@ here are the basic functions of PySQL :
 1. `log()` Write text to terminal  
    Example : `log('Hello World')`
 2. `input()` Read text from terminal  
-   Example : `var name = input('What's your name ? ')`
+   Example : `let name = input('What's your name ? ')`
 
 # SQL requests (yipeee)
 
