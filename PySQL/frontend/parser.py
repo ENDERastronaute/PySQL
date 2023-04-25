@@ -22,6 +22,7 @@ class Parser:
         self.version = version
         self.test = None
         self.stack = []
+        self.islastnumeric = False
 
     def advance(self):
         self.current_index += 1
@@ -98,8 +99,33 @@ class Parser:
             return result
         
         elif token.type == "Num":
+            alpha = token.lookahead
+            tsp = self.current_index
+        
             self.advance()
-            return int(token.lookahead)
+            
+            if self.current_token is not None:
+                if self.current_token.type in ('Alpha', 'UNDER'):
+                    while self.current_token.type in ('Alpha', 'UNDER'):
+                        alpha += self.current_token.lookahead
+                        self.advance()
+                    
+                    self.current_index -= 1
+                    self.current_token = self.tokens[self.current_index]
+                    
+                    self.tokens[self.current_index].type = 'Alpha'
+                    self.tokens[self.current_index].lookahead = alpha
+                    self.tokens[self.current_index].token_start_pos = tsp
+
+                    self.islastnumeric = True
+                    
+                    return self.expr()
+                
+                else:  
+                    return int(token.lookahead)
+            
+            else:
+                return int(token.lookahead)
         
         elif token.type == "Func":
             func_name = token.lookahead
@@ -117,11 +143,8 @@ class Parser:
                         if self.current_token.type == 'Num' or self.current_token.type == 'APO':
                             arg = str(self.expr())
 
-                        elif self.current_token.type == 'Alpha':
-                            if self.current_token.lookahead not in list(self.variables.keys()):
-                                raise Exception("Variable doesn't exist")
-
-                            arg = str(self.variables[self.current_token.lookahead])
+                        elif self.current_token.type in ('Alpha', 'UNDER'):
+                            arg = str(self.expr())
                     
                     else:
                         raise Exception("Expected ')'")
@@ -174,15 +197,20 @@ class Parser:
         elif token.type == "Keyword":
             var_types = ['Bool', 'Num', 'APO', 'Alpha', 'Func', 'LACO']
 
-            if token.lookahead == 'var':
+            if token.lookahead == 'let':
                 self.advance()
-
-                if self.current_token.type != 'Alpha':
-                    raise Exception("Invalid assignation syntax")
                 
-                var_name = self.current_token.lookahead
+                var_name = ''
 
-                self.advance()
+                if self.current_token.type not in ('Alpha', 'Num', 'UNDER'):
+                    raise Exception("Invalid assignation syntax")
+                    
+                while self.current_token.type in ('Alpha', 'Num', 'UNDER'):
+                    var_name += self.current_token.lookahead
+                    self.advance()
+                    
+                    if self.current_index >= len(self.tokens):
+                        raise Exception('Invalid assignation syntax')
 
                 if self.current_token.type != 'EQ':
                     raise Exception("Invalid assignation syntax")
@@ -386,15 +414,42 @@ class Parser:
             self.advance()
             return self.expr()
 
-        elif self.current_token.type == 'Alpha':
-            if self.current_token.lookahead not in self.variables :
+        elif self.current_token.type in ('Alpha', 'UNDER'):
+            name = ''
+
+            while self.current_token.type in ('Alpha', 'UNDER', 'Num'):
+                name += self.current_token.lookahead
+                self.advance()
+            
+            self.current_index -= 1
+            self.current_token = self.tokens[self.current_index]
+
+            if name not in self.variables :
                 raise Exception("Variable doesn't exist")
             
-            arg = self.current_token.lookahead
+            arg = self.variables[name]
             
             self.advance()
+
+            if self.current_token.type == 'EQ':
+                self.advance()
+
+                if self.current_token.type not in ('Bool', 'Num', 'APO', 'Alpha', 'Func', 'LACO'):
+                    raise Exception('Invalid reassignation syntax')
+                
+                self.variables[name] = self.expr()
             
             return arg
+        
+        elif self.current_token.type == 'Bool':
+            if self.current_token.lookahead == 'true':
+                return True
+            
+            elif self.current_token.lookahead == 'false':
+                return False
+            
+            else:
+                return None
         
         elif self.current_token.type == 'LACO':
             dictionnary = self.create_dictionnary()

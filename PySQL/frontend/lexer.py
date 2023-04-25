@@ -7,7 +7,7 @@ class Lexer():
         tokens = []
 
         keywords = [
-            'var',
+            'let',
             'cls',
             'stop',
             'if',
@@ -18,6 +18,12 @@ class Lexer():
         functions = [
             'log',
             'input'
+        ]
+
+        bools = [
+            'true',
+            'false',
+            'none'
         ]
 
         current_pos = 0
@@ -123,6 +129,9 @@ class Lexer():
                 elif text in functions or input_string[current_pos] == '(':
                     tokens.append(Token('Func', text, token_start_pos))
                 
+                elif text in bools:
+                    tokens.append(Token('Bool', text, token_start_pos))
+                
                 else:
                     tokens.append(Token('Alpha', text, token_start_pos))
             
@@ -173,6 +182,10 @@ class Lexer():
             elif lookahead == ':':
                 current_pos += 1
                 tokens.append(Token('DP', lookahead, token_start_pos))
+               
+            elif lookahead == '_':
+                current_pos += 1
+                tokens.append(Token('UNDER', lookahead, token_start_pos))
             
             else:
                 raise Exception('Invalid token type')
