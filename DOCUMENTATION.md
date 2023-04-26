@@ -15,10 +15,10 @@ it's literally a number, like : `14`
 Use `let` or `var` keyword to assign your variables  
 Example : `let name = 'ENDERastronaute'`
 
-# If Elif Else statements (broken in v0.6.2)
+# If Elif Else statements
 
-`elif` is not implemented yet  
-Unlike python it uses `{}`
+Unlike python it uses `{}`  
+`or` and `and` are not implemented yet
 
 Example : `if name == 'ENDERastronaute' { log(name) }`
 

@@ -6,7 +6,7 @@ from frontend.lexer import Lexer
 from frontend.parser import Parser
 import sys
 
-version = '0.6.1'
+version = '0.7'
 
 
 #---MAIN---#

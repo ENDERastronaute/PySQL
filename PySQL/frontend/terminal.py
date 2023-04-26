@@ -9,6 +9,6 @@ class Terminal():
 
     def start(self):
         os.system('cls' if sys.platform == 'win32' else 'clear')
-        print(f'-----------PySQL v{self.version}-----------')
-        print('-----------license GNU----------')
+        print(f'>--------------------PySQL v{self.version}--------------------<')
+        print('>--------------------license GNU-------------------<')
         print()

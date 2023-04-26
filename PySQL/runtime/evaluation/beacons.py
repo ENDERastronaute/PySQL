@@ -1,6 +1,6 @@
 
 from runtime.evaluation.expressions import *
-from runtime.evaluation.tokener import advance
+from utils.tokener import advance
 
 def check_balise(current_token, current_index, tokens):
     db = None

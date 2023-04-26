@@ -4,7 +4,9 @@ from frontend.terminal import Terminal
 from modules.tabulate.tabulate import tabulate
 from runtime.evaluation.beacons import *
 from runtime.evaluation.expressions import *
-from runtime.evaluation.tokener import advance
+from utils.tokener import advance
+from frontend.lexer import Lexer
+from runtime.evaluation.conditional import *
 
 
 class Interpreter:
@@ -17,6 +19,7 @@ class Interpreter:
         self.test = None
         self.stack = []
         self.islastnumeric = False
+        self.intest = False
     
     def expr(self):
         result = self.term()
@@ -56,8 +59,9 @@ class Interpreter:
     def factor(self):
         token = self.current_token
 
-        if token.lookahead != 'else' and token.type != 'NewLine' and len(self.stack) == 0:
+        if token.lookahead not in ('else', 'elif', 'NewLine') and self.intest is False:
             self.test = None
+            self.stack.clear()
         
         match token.type:
 
@@ -65,11 +69,12 @@ class Interpreter:
                 self.current_token, self.current_index = advance(self.current_index, self.tokens)
                 result, self.current_token, self.current_index = self.expr()
 
-                if self.current_token.type != "RPAREN":
-                    raise Exception("Expected ')'")
-                
-                else:
-                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                match self.current_token.type:
+                    case 'RPAREN':
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
+                    case _:
+                        raise Exception("Expected ')'")
 
                 return result
         
@@ -81,18 +86,7 @@ class Interpreter:
                 
                 if self.current_token is not None:
                     if self.current_token.type in ('Alpha', 'UNDER'):
-                        while self.current_token.type in ('Alpha', 'UNDER'):
-                            alpha += self.current_token.lookahead
-                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                        
-                        self.current_index -= 1
-                        self.current_token = self.tokens[self.current_index]
-                        
-                        self.tokens[self.current_index].type = 'Alpha'
-                        self.tokens[self.current_index].lookahead = alpha
-                        self.tokens[self.current_index].token_start_pos = tsp
-
-                        self.islastnumeric = True
+                        self.current_index, self.current_token, self.tokens[self.current_index].type, self.tokens[self.current_index].lookahead, self.tokens[self.current_index].token_start_pos, self.islastnumeric = evaluate_num(self.current_index, self.current_token, self.tokens, alpha, tsp)
                         
                         return self.expr()
                     
@@ -117,11 +111,11 @@ class Interpreter:
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
                             if self.current_token is not None:
-                                if self.current_token.type == 'Num' or self.current_token.type == 'APO':
+                                if self.current_token.type in ('Num', 'APO', 'Bool', 'Func'):
                                     argu, self.current_token, self.current_index = self.expr()
                                     arg += str(argu)
 
-                                elif self.current_token.type in ('Alpha', 'UNDER'):
+                                elif self.current_token.type in ('Alpha'):
                                     argu, self.current_token, self.current_index = self.expr()
                                     arg += str(argu)
                             
@@ -176,17 +170,12 @@ class Interpreter:
                     case 'let' | 'var':
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
                         
-                        var_name = ''
+                        var_name = self.current_token.lookahead
 
-                        if self.current_token.type not in ('Alpha', 'Num', 'UNDER'):
+                        if self.current_token.type != 'Alpha':
                             raise Exception("Invalid assignation syntax")
-                            
-                        while self.current_token.type in ('Alpha', 'Num', 'UNDER'):
-                            var_name += self.current_token.lookahead
-                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                            
-                            if self.current_index >= len(self.tokens):
-                                raise Exception('Invalid assignation syntax')
+                        
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
                         if self.current_token.type != 'EQ':
                             raise Exception("Invalid assignation syntax")
@@ -213,136 +202,97 @@ class Interpreter:
                         exit()
 
                     case 'if':
-                        operandes = ['EQ', 'SUP', 'INF', 'NOT']
-
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                        
-                        if self.current_token.type == 'Alpha':
-                            first, self.current_token, self.current_index = self.expr()
-                            first = self.variables[first]
-                        
-                        else:
-                            first, self.current_token, self.current_index = self.expr()
 
-                        if self.current_token.type not in operandes:
-                            raise Exception("Invalid statement syntax")
-                        
-                        if self.current_token.type == 'EQ':
+                        cond = ''
+
+                        while self.current_token.type != 'LACO':
+                            cond += self.current_token.lookahead
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                            if self.current_token.type != 'EQ':
-                                raise Exception("Invalid statement syntax")
+                            if self.current_index >= len(self.tokens):
+                                raise Exception('ph')
+                        
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                        condition = conditional(cond, self.variables)
+
+                        if condition:
+                            self.intest = True
+                            self.expr()
+                            self.intest = False
+                            self.test = None
+                        
+                        else:
+                            self.test = condition
                             
+                        while self.current_token.type != 'RACO':
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                        
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
+                        self.stack.append(1)
+
+                    
+                    case 'elif':
+                        if self.test is None and len(self.stack) == 0:
+                            raise Exception('sus')
+                        
+                        elif self.test is not None:
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                            second, self.current_token, self.current_index = self.expr()
+                            cond = ''
 
-                            mode = '=='
+                            while self.current_token.type != 'LACO':
+                                cond += self.current_token.lookahead
+                                self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
+                                if self.current_index >= len(self.tokens):
+                                    raise Exception('ph')
+                            
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                            condition = conditional(cond, self.variables)
+
+                            if condition and not self.test:
+                                self.intest = True
+                                self.expr()
+                                self.intest = False
+                                self.test = None
+                            
+                            else:
+                                self.test = condition
 
                         else:
-                            raise Exception("Invalid statement syntax")
-                        
+                            while self.current_token.type != 'RACO':
+                                self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        if self.current_token.type != 'LACO':
-                            if self.current_token.type != 'NewLine':
-                                raise Exception('Invalid statement syntax')
-                        
-                        self.stack.append(self.current_token)
+                        while self.current_token.type != 'RACO':
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        match mode:
-                            case '==':
-                                if first == second:
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                    self.expr()
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)                      
 
-                                    if self.current_token is not None:
+                        self.stack.append(1)
 
-                                        if self.current_token.type != 'RACO':
-                                            if self.current_token.type != 'NewLine':
-                                                raise Exception('Invalid statement syntax')
-                                            
-                                            else:
-                                                valid = False
-                                                num = self.current_index
-
-                                                while num < len(self.tokens):
-                                                    num += 1
-                                                    
-                                                    if self.tokens[num].type == 'RACO':
-                                                        valid = True
-                                                        break
-
-                                                if not valid:
-                                                    raise Exception("Invalid statement syntax")
-                                    
-                                    else:
-                                        raise Exception('Invalid statement syntax')
-                                    
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                
-                                else:
-                                    while self.current_token.type != 'RACO':
-                                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                    
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                            
-                                
-                                self.test = Test(first, mode, second)
                     
                     case 'else':
-                        if self.test == None:
-                            raise Exception("No if statement")
+                        if self.test is None and len(self.stack) == 0:
+                            raise Exception('sus')
                         
-                        first = self.test.first
-                        mode = self.test.mode
-                        second = self.test.second
+                        elif self.test is not None:
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
+                            if self.current_token.type != 'LACO':
+                                raise Exception('sus')
+                            
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
+                            if not self.test:
+                                self.expr()
+
+                        while self.current_token.type != 'RACO':
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                        
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        if self.current_token.type != 'LACO':
-                            if self.current_token.type != 'NewLine':
-                                raise Exception('Invalid statement syntax')
-                        
-                        self.stack.append(self.current_token)
-                        
-                        match mode:
-
-                            case '==':
-                                if first != second:
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                    self.expr()
-
-                                    if self.current_token is not None:
-
-                                        if self.current_token.type != 'RACO':
-                                            if self.current_token.type != 'NewLine':
-                                                raise Exception('Invalid statement syntax')
-                                            
-                                            else:
-                                                valid = False
-                                                num = self.current_index
-
-                                                while num < len(self.tokens):
-                                                    num += 1
-                                                    
-                                                    if self.tokens[num].type == 'RACO':
-                                                        valid = True
-                                                        break
-
-                                                if not valid:
-                                                    raise Exception("Invalid statement syntax")
-                                    
-                                    else:
-                                        raise Exception('Invalid statement syntax')
-                                    
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                
-                                else:
-                                    while self.current_token.type != 'RACO':
-                                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                                    
-                                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                    
                     case 'while':
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
@@ -368,7 +318,11 @@ class Interpreter:
                                 self.current_token = first_token
 
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                            
+                    
+
+                    case _:
+                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
             case 'APO':
                 self.current_token, self.current_index = advance(self.current_index, self.tokens)
                 num = self.current_index
@@ -392,20 +346,11 @@ class Interpreter:
                 self.current_token, self.current_index = advance(self.current_index, self.tokens)
                 return self.expr()
 
-            case 'Alpha' | 'UNDER':
-                name = ''
-
-                while self.current_token.type in ('Alpha', 'UNDER', 'Num'):
-                    name += self.current_token.lookahead
-                    self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                
-                self.current_index -= 1
-                self.current_token = self.tokens[self.current_index]
+            case 'Alpha':
+                name = self.current_token.lookahead
 
                 if name not in self.variables :
                     raise Exception("Variable doesn't exist")
-                
-                arg = self.variables[name]
                 
                 self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
@@ -416,6 +361,8 @@ class Interpreter:
                         raise Exception('Invalid reassignation syntax')
                     
                     self.variables[name], self.current_token, self.current_index = self.expr()
+                
+                arg = self.variables[name]
                 
                 return arg
         
@@ -488,4 +435,3 @@ class Interpreter:
 
             case _:
                 raise Exception("Invalid token type")
-

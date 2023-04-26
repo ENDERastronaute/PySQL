@@ -1,6 +1,6 @@
 
 from runtime.interpreter import Interpreter
-from runtime.evaluation.tokener import advance
+from utils.tokener import advance
 
 class Parser:
     def __init__(self, tokens, variables, version):
