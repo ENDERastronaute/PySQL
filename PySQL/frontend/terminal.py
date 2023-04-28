@@ -9,6 +9,20 @@ class Terminal():
 
     def start(self):
         os.system('cls' if sys.platform == 'win32' else 'clear')
-        print(f'>--------------------PySQL v{self.version}--------------------<')
-        print('>--------------------license GNU-------------------<')
+
+        print('>', end='')
+
+        for i in range(int(((-1 * (len(self.version))) + 43)/2)):
+            print('-', end='')
+
+        print(f'PySQL v{self.version}', end='')
+
+        for i in range(int(((-1 * (len(self.version))) + 43)/2)):
+            print('-', end='')
+
+    
+
+        print('<', end='')
+
+        print('\n>--------------------license GNU-------------------<')
         print()

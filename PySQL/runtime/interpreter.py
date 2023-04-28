@@ -1,11 +1,9 @@
-from components.test import Test
 import psycopg2
 from frontend.terminal import Terminal
 from modules.tabulate.tabulate import tabulate
 from runtime.evaluation.beacons import *
 from runtime.evaluation.expressions import *
 from utils.tokener import advance
-from frontend.lexer import Lexer
 from runtime.evaluation.conditional import *
 
 
@@ -20,6 +18,7 @@ class Interpreter:
         self.stack = []
         self.islastnumeric = False
         self.intest = False
+        self.nest = 0
     
     def expr(self):
         result = self.term()
@@ -61,7 +60,11 @@ class Interpreter:
 
         if token.lookahead not in ('else', 'elif', 'NewLine') and self.intest is False:
             self.test = None
-            self.stack.clear()
+
+            if len(self.stack) != 0:
+                self.stack.pop()
+            
+            self.nest = 0
         
         match token.type:
 
@@ -202,64 +205,60 @@ class Interpreter:
                         exit()
 
                     case 'if':
+                        nest = self.nest
+                        self.nest += 1
+
+                        self.stack.append(1)
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        cond = ''
+                        cond, self.current_token, self.current_index = create_cond(self.tokens, self.current_index, self.current_token)
 
-                        while self.current_token.type != 'LACO':
-                            cond += self.current_token.lookahead
-                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
-
-                            if self.current_index >= len(self.tokens):
-                                raise Exception('ph')
-                        
-                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
                         condition = conditional(cond, self.variables)
 
                         if condition:
-                            self.intest = True
-                            self.expr()
+                            while self.current_token.type != 'RACO':
+                                self.intest = True
+                                self.expr()
+
                             self.intest = False
                             self.test = None
                         
                         else:
                             self.test = condition
-                            
+                            self.intest = True
+                        
                         while self.current_token.type != 'RACO':
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
                         
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        self.stack.append(1)
-
                     
                     case 'elif':
+                        nest = self.nest
+                        self.nest += 1
+
                         if self.test is None and len(self.stack) == 0:
                             raise Exception('sus')
                         
                         elif self.test is not None:
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                            cond = ''
+                            cond, self.current_token, self.current_index = create_cond(self.tokens, self.current_index, self.current_token)
 
-                            while self.current_token.type != 'LACO':
-                                cond += self.current_token.lookahead
-                                self.current_token, self.current_index = advance(self.current_index, self.tokens)
-
-                                if self.current_index >= len(self.tokens):
-                                    raise Exception('ph')
-                            
-                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
                             condition = conditional(cond, self.variables)
 
+
                             if condition and not self.test:
-                                self.intest = True
-                                self.expr()
+                                while self.current_token.type != 'RACO':
+                                    self.intest = True
+                                    self.expr()
+
                                 self.intest = False
                                 self.test = None
                             
                             else:
                                 self.test = condition
+                                self.intest = True
 
                         else:
                             while self.current_token.type != 'RACO':
@@ -270,10 +269,11 @@ class Interpreter:
 
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)                      
 
-                        self.stack.append(1)
-
                     
                     case 'else':
+                        self.nest += 1
+                        nest = self.nest
+
                         if self.test is None and len(self.stack) == 0:
                             raise Exception('sus')
                         
@@ -285,40 +285,46 @@ class Interpreter:
                             
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
+
                             if not self.test:
-                                self.expr()
+                                while self.current_token.type != 'RACO':
+                                    self.expr()
 
                         while self.current_token.type != 'RACO':
                             self.current_token, self.current_index = advance(self.current_index, self.tokens)
                         
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
+                        self.intest = False
+
                     case 'while':
+                        nest = self.nest
+                        self.nest += 1
+
+                        self.stack.append(1)
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
 
-                        condition, self.current_token, self.current_index = self.expr()
+                        cond, self.current_token, self.current_index = create_cond(self.tokens, self.current_index, self.current_token)
+                        condition = conditional(cond, self.variables)
 
-                        print(self.current_token.type)
-
-                        first_token = self.current_token
-                        first_index = self.current_index
-
-                        if self.current_token.type not in ('EQ', 'LACO', 'INF', 'SUP', 'NOT'):
-                            raise Exception("Expected '{'")
-
-                        self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                        
-                        self.stack.append(self.current_token)
+                        start = self.current_index
 
                         while condition:
-                            self.expr()
+                            while self.current_token.type != 'RACO':
+                                self.intest = True
+                                self.expr()
+                            
+                            self.intest = False
+                            
+                            self.current_index = start
+                            self.current_token = self.tokens[self.current_index]
 
-                            if self.current_token.type == 'RACO':
-                                self.current_index = first_index
-                                self.current_token = first_token
+                            condition = conditional(cond, self.variables)
 
+                        while self.current_token.type != 'RACO' and nest != self.nest:
+                            self.current_token, self.current_index = advance(self.current_index, self.tokens)
+                        
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
-                    
 
                     case _:
                         self.current_token, self.current_index = advance(self.current_index, self.tokens)
@@ -388,9 +394,8 @@ class Interpreter:
             case 'RACO':
                 if len(self.stack) == 0:
                     raise Exception("Syntax error : No matching '{'")
-                
-                self.stack.pop()
-                self.current_token, self.current_index = advance(self.current_index, self.tokens)
+
+                self.nest -= 1
 
             case 'INF':
                 self.current_token, self.current_index = advance(self.current_index, self.tokens)

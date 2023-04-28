@@ -4,3 +4,4 @@ class Token():
         self.type = type
         self.lookahead = lookahead
         self.token_start_pos = token_start_pos
+        self.endof = None

@@ -42,6 +42,7 @@ class Lexer():
 
                 case ' ':
                     current_pos += 1
+                    
                 
                 case '\n':
                     current_pos += 1

@@ -17,6 +17,8 @@ Example : `let name = 'ENDERastronaute'`
 
 # If Elif Else statements
 
+note that you can't put a statement inside a statement yet (if in if, if in while, while in if, ... not possible)
+
 Unlike python it uses `{}`  
 `or` and `and` are not implemented yet
 
